@@ -1,20 +1,57 @@
 name: Check and Notify
 
 on:
-  workflow_dispatch:
   schedule:
-    - cron: '*/15 * * * *' # Every 15 minutes
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
 
 jobs:
   check-and-notify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
-          cache: 'pip'
-      - run: pip install -r src/requirements.txt
-      - run: python src/run.py
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Check for appointment slots
         env:
           LOCATION_IDS: ${{ vars.LOCATION_IDS }}
+          TARGET_DATES: ${{ vars.TARGET_DATES }}
+        run: python src/run.py
+
+      - name: Read slot results
+        id: slots
+        run: |
+          if [ -s slots.txt ]; then
+            echo "found=true" >> $GITHUB_OUTPUT
+            {
+              echo "content<<EOF"
+              cat slots.txt
+              echo "EOF"
+            } >> $GITHUB_OUTPUT
+          else
+            echo "found=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Send email notification
+        if: steps.slots.outputs.found == 'true'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.GMAIL_ADDRESS }}
+          password: ${{ secrets.GMAIL_APP_PASSWORD }}
+          to: ${{ secrets.GMAIL_ADDRESS }}
+          from: Global Entry Notifier
+          subject: "Global Entry Appointment Available!"
+          body: |
+            Open appointment slots found matching your criteria!
+
+            ${{ steps.slots.outputs.content }}
+
+            Book now at https://ttp.cbp.dhs.gov/
