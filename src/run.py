@@ -30,7 +30,7 @@ def check_appointments():
         if location_id not in locations_by_id:
             raise ValueError(f'Unknown location ID {location_id}')
 
-    matching_slots = []
+   slots_by_date = {}
     for location_id in location_ids:
         slots = get_slots_for_location(location_id)
         location_name = locations_by_id[location_id]['name']
@@ -39,8 +39,15 @@ def check_appointments():
             if target_dates and slot_date not in target_dates:
                 continue
             line = f"{location_name}: {slot['startTimestamp']} - {slot['endTimestamp']} ({slot['duration']} minutes)"
-            matching_slots.append(line)
-            print(line)
+            slots_by_date.setdefault(slot_date, []).append(line)
+
+    matching_slots = []
+    for date, lines in slots_by_date.items():
+        if len(lines) >= 2:
+            matching_slots.extend(lines)
+
+    for line in matching_slots:
+        print(line)
 
     return matching_slots
 
