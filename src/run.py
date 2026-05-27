@@ -30,7 +30,7 @@ def check_appointments():
         if location_id not in locations_by_id:
             raise ValueError(f'Unknown location ID {location_id}')
 
-   slots_by_date = {}
+    slots_by_date = {}
     for location_id in location_ids:
         slots = get_slots_for_location(location_id)
         location_name = locations_by_id[location_id]['name']
